@@ -1,13 +1,19 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
 
-class ReviewCreate(BaseModel):
-    reviewer_id: int
-    reviewed_user_id: int
-    rating: int
-    comment: str
+class ReviewBase(BaseModel):
+    rating: float = Field(..., ge=1.0, le=5.0, description="Rating between 1 and 5")
+    comment: Optional[str] = None
 
-class ReviewOut(ReviewCreate):
+class ReviewCreate(ReviewBase):
+    listing_id: int
+
+class ReviewOut(ReviewBase):
     id: int
+    user_id: int
+    listing_id: int
+    created_at: datetime
 
     class Config:
         orm_mode = True
