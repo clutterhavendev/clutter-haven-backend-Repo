@@ -1,18 +1,26 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
+from enum import Enum
+import datetime
 
-class OrderItem(BaseModel):
-    listing_id: int
-    quantity: int
+class OrderStatus(str, Enum):
+    pending = "pending"
+    confirmed = "confirmed"
+    cancelled = "cancelled"
+    delivered = "delivered"
+    refunded = "refunded"
 
 class OrderCreate(BaseModel):
-    buyer_id: int
-    items: List[OrderItem]
+    listing_id: int
+    amount: float
 
-class OrderOut(BaseModel):
+class OrderResponse(BaseModel):
     id: int
-    status: str
-    items: List[OrderItem]
+    buyer_id: int
+    listing_id: int
+    amount: float
+    status: OrderStatus
+    created_at: datetime.datetime
 
     class Config:
         orm_mode = True
