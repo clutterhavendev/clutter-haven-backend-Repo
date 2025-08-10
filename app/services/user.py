@@ -44,7 +44,7 @@ class UserService:
         
         # If seller, create vendor profile with basic plan
         if user_data.user_type == "seller":
-            basic_plan = db.query(VendorPlan).filter(VendorPlan.name == "basic").first()
+            basic_plan = db.query(VendorPlan).filter(VendorPlan.name == "Basic").first()
             if not basic_plan:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -14,9 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import cloudinary
 
 from .routers import auth, user, vendor, listings, orders, wallets, reviews
-from db.session import engine
+from db.session import engine, SessionLocal  # Added SessionLocal import
 from models.base import Base
 from config import settings
+from .services.seed_service import SeedService  # Added SeedService import
 
 # Initialize Cloudinary
 cloudinary.config(
@@ -43,6 +44,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Startup event for database seeding
+@app.on_event("startup")
+async def startup_event():
+    """Run startup tasks including database seeding"""
+    db = SessionLocal()
+    try:
+        # Seed vendor plans
+        SeedService.seed_vendor_plans(db)
+        print("Database seeding completed")
+    except Exception as e:
+        print(f"Database seeding failed: {e}")
+    finally:
+        db.close()
 
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])

@@ -13,6 +13,7 @@ class VendorPlan(Base):
     remittance_rate = Column(DECIMAL(5, 2), nullable=False)  # Percentage
     max_listings_per_month = Column(Integer, nullable=False)
     visibility_boost = Column(Boolean, default=False)
+    description = Column(String, nullable=True)
     
     # Relationships
     vendors = relationship("Vendor", back_populates="plan")

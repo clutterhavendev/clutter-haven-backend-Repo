@@ -1,0 +1,196 @@
+CLUTTER HAVEN API TESTING
+
+1 HEALTH ENDPOINT
+
+GET http://127.0.0.1:8000/health
+
+200 OK { "status": "healthy" }
+
+2 ROOT ENDPOINT
+
+GET http://127.0.0.1:8000/
+
+200 OK { "message": "Welcome to ClutterHaven API" }
+
+3 Register User
+
+POST http://127.0.0.1:8000/auth/register
+
+Request body: { "email": "test@example.com", "password": "TestPassword123!", "full_name": "Test User", "phone": "+1234567890", "user_type": "buyer" }
+
+200 OK { "id": 2, "full_name": "Test User", "email": "test@example.com", "phone": "+1234567890", "user_type": "buyer", "is_verified": false, "created_at": "2025-08-09T21:49:56.160272" }
+
+{ "email": "pope@example.com", "password": "pope!", "full_name": "pope", "phone": "+1234567890", "user_type": "seller" }
+
+200 OK { "id": 41, "full_name": "pope", "email": "pope@example.com", "phone": "+1234567890", "user_type": "seller", "is_verified": false, "created_at": "2025-08-10T12:36:47.132925" }
+
+4 Login user
+
+POST http://127.0.0.1:8000/auth/login
+
+Request body:{ "email": "test@example.com", "password": "TestPassword123!" }
+
+200 OK { "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwiZXhwIjoxNzU0OTExMDI2fQ.18rlpV5v18zouWavrsgkHDRhiXFIxZ_J161k4SRJ0Rc", "token_type": "bearer", "user": { "id": 2, "phone": "+1234567890", "password_hash": "$2b$12$xMqbQcs.jkXNcLz11h/Ivuj0fg2HS78RmkokfUfLFMWD1.VRZc8aS", "is_verified": false, "is_admin": false, "full_name": "Test User", "email": "test@example.com", "user_type": "buyer", "created_at": "2025-08-09T21:49:56.160272" } }
+
+200 OK { "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MSIsImV4cCI6MTc1NDkxNTkzNH0.sz3CifxsbEUKkF7P4TGCkwqm-PzueIs12yML4UoZ0lY", "token_type": "bearer", "user": { "id": 41, "phone": "+1234567890", "password_hash": "$2b$12$Y0fVortRETSiuzT/GVQIE.7TwRkZFYN5kpkWgrfAbcuhF6aRyNMqm", "is_verified": false, "is_admin": false, "full_name": "pope", "email": "pope@example.com", "user_type": "seller", "created_at": "2025-08-10T12:36:47.132925" } }
+
+5 Get current user
+
+GET http://127.0.0.1:8000/users/me
+
+200 OK { "id": 2, "full_name": "Test User", "email": "test@example.com", "phone": "+1234567890", "user_type": "buyer", "is_verified": false, "created_at": "2025-08-09T21:49:56.160272" }
+
+Update Current User Profile
+PUT http://127.0.0.1:8000/users/me
+
+200 OK { "id": 2, "full_name": "Updated Test User", "email": "test@example.com", "phone": "+1987654321", "user_type": "buyer", "is_verified": false, "created_at": "2025-08-09T21:49:56.160272" }
+
+Verify User
+PUT http://127.0.0.1:8000/users/verify/2
+
+200 OK { "id": 2, "full_name": "Updated Test User", "email": "test@example.com", "phone": "+1987654321", "user_type": "buyer", "is_verified": true, "created_at": "2025-08-09T21:49:56.160272" }
+
+Get Vendor Plans
+GET http://127.0.0.1:8000/vendors/plans 200 OK [ { "id": 1, "name": "Basic", "monthly_fee": "0.00", "remittance_rate": "0.92", "max_listings_per_month": 10, "visibility_boost": false }, { "id": 2, "name": "Premium", "monthly_fee": "29.99", "remittance_rate": "0.95", "max_listings_per_month": -1, "visibility_boost": true } ]
+
+Get My Vendor Profile
+GET http://127.0.0.1:8000/vendors/me 200 { "id": 2, "user_id": 41, "plan_id": 1, "verification_status": "pending", "id_verified": false, "location_verified": false, "created_at": "2025-08-10T12:36:47.141642" }
+
+10 Get My Wallet
+
+GET http://127.0.0.1:8000/wallets/me
+
+200 OK { "id": 2, "user_id": 2, "balance": "0.00", "updated_at": "2025-08-09T21:49:56.237158" }
+
+11 TOP-UP WALLET
+
+200 OK { "message": "Wallet topped up with $100.0", "new_balance": 100.0 }
+
+12 Update Vendor Verification PUT http://127.0.0.1:8000/vendors/verification
+
+request body: { "id": 2, "user_id": 41, "plan_id": 1, "verification_status": "verified", "id_verified": true, "location_verified": true, "created_at": "2025-08-10T12:36:47.141642" }
+
+200 OK { "id": 2, "user_id": 41, "plan_id": 1, "verification_status": "verified", "id_verified": true, "location_verified": true, "created_at": "2025-08-10T12:36:47.141642" }
+
+13 create listing
+
+POST http://127.0.0.1:8000/listings
+
+Request body { "id": 1, "vendor_id": 2, "title": "Test Product", "description": "This is a test product description", "price": "29.99", "item_condition": "new", "category": "electronics", "image_url": null, "is_active": true, "created_at": "2025-08-10T13:09:23.940536" }
+
+200 OK { "id": 1, "vendor_id": 2, "title": "Test Product", "description": "This is a test product description", "price": "29.99", "item_condition": "new", "category": "electronics", "image_url": null, "is_active": true, "created_at": "2025-08-10T13:09:23.940536" }
+
+13 GET LISTINGS
+
+GET http://127.0.0.1:8000/listings?
+
+200 OK
+
+[ { "id": 1, "vendor_id": 2, "title": "Test Product", "description": "This is a test product description", "price": "29.99", "item_condition": "new", "category": "electronics", "image_url": null, "is_active": true, "created_at": "2025-08-10T13:09:23.940536" } ]
+
+14 GET MY LISTINGS
+
+GET http://127.0.0.1:8000/listings/my-listings
+
+200 OK [ { "id": 1, "vendor_id": 2, "title": "Test Product", "description": "This is a test product description", "price": "29.99", "item_condition": "new", "category": "electronics", "image_url": null, "is_active": true, "created_at": "2025-08-10T13:09:23.940536" } ]
+
+15 Get Specific Listing
+
+GET http://127.0.0.1:8000/listings/1
+
+200 OK
+
+{ "id": 1, "vendor_id": 2, "title": "Test Product", "description": "This is a test product description", "price": "29.99", "item_condition": "new", "category": "electronics", "image_url": null, "is_active": true, "created_at": "2025-08-10T13:09:23.940536" }
+
+16 UPDATE LISTING
+
+{ "title": "Updated Test Product", "price": 39.99, "description": "Updated description" }
+
+200 OK
+
+{ "id": 1, "vendor_id": 2, "title": "Updated Test Product", "description": "Updated description", "price": "39.99", "item_condition": "new", "category": "electronics", "image_url": null, "is_active": true, "created_at": "2025-08-10T13:09:23.940536" }
+
+17 Toggle listing status
+
+PUT http://127.0.0.1:8000/listings/1/toggle
+
+200 okay
+
+{ "id": 1, "vendor_id": 2, "title": "Updated Test Product", "description": "Updated description", "price": "39.99", "item_condition": "new", "category": "electronics", "image_url": null, "is_active": false, "created_at": "2025-08-10T13:09:23.940536" }
+
+18 UPLOAD IMAGE
+
+POST http://127.0.0.1:8000/listings/upload-image
+
+Form data:
+
+file: [select an image file]
+listing_id: 1
+200 OK
+
+{ "image_url": "https://res.cloudinary.com/dnauc5t08/image/upload/v1754832113/od5hoajq8ctsg91bn2pq.png", "public_id": "od5hoajq8ctsg91bn2pq" }
+
+19 CREATE ORDER
+
+POST http://127.0.0.1:8000/orders
+
+{ "listing_id": 1, "quantity": 1, "delivery_address": "456 Delivery Street, Test City" }
+
+200 OK
+
+{ "id": 1, "buyer_id": 2, "listing_id": 1, "status": "pending", "ordered_at": "2025-08-10T13:45:24.003875", "delivered_at": null }
+
+20 GET MY PURCHASES
+
+GET http://127.0.0.1:8000/orders/my-purchases
+
+200 OK
+
+[ { "id": 1, "buyer_id": 2, "listing_id": 1, "status": "pending", "ordered_at": "2025-08-10T13:45:24.003875", "delivered_at": null } ]
+
+21 UPDATE ORDER STATUS
+
+PUT http://127.0.0.1:8000/orders/1/status
+
+{ "status": "confirmed" }
+
+{ "id": 1, "buyer_id": 2, "listing_id": 1, "status": "confirmed", "ordered_at": "2025-08-10T13:45:24.003875", "delivered_at": null }
+
+22 CONFIRM DELIVERY
+
+http://127.0.0.1:8000/orders/1/confirm-delivery
+
+400 BAD REQUEST
+
+{ "detail": "Order must be shipped before confirmation" }
+
+{ "delivery_confirmation_code": "DEL123" }
+
+200 OK
+
+{ "message": "Delivery confirmed, payment released to seller" }
+
+23 CREATE REVIEW
+
+POST http://127.0.0.1:8000/reviews
+
+{ "order_id": 1, "vendor_id": 2, "rating": 5, "comment": "Great product and service!" }
+
+200 OK
+
+{ "id": 1, "buyer_id": 2, "vendor_id": 2, "rating": 5, "comment": "Great product and service!", "created_at": "2025-08-10T13:58:19.988205" }
+
+{ "order_id": 1, "vendor_id": 3, "rating": 5, "comment": "Great product and service!" }
+
+400 BAD REQUEST
+
+{ "detail": "You can only review vendors you've purchased from" }
+
+24 GET VENDOR REVIEW
+
+GET http://127.0.0.1:8000/reviews/vendor/2
+
+200 OK
+
+[ { "id": 1, "buyer_id": 2, "vendor_id": 2, "rating": 5, "comment": "Great product and service!", "created_at": "2025-08-10T13:58:19.988205" } ]
+
