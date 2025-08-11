@@ -118,8 +118,8 @@ python-jose==3.3.0
 python-json-logger==3.2.1
 python-multipart==0.0.6
 pytz==2025.2
-pywin32==308
-pywinpty==2.0.15
+pywin32==308; platform_system == "Windows"
+pywinpty==2.0.15; platform_system == "Windows"
 PyYAML==6.0.1
 pyzmq==26.2.1
 referencing==0.36.2
