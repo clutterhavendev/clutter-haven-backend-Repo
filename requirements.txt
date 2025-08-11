@@ -23,7 +23,6 @@ alembic==1.12.1
 psycopg2-binary==2.9.9
 mysql-connector-python==9.2.0
 peewee==3.18.0
-greenlet==3.0.1
 
 # Authentication and security
 PyJWT==2.10.1
