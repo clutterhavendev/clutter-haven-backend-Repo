@@ -13,11 +13,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import cloudinary
 
-from .routers import auth, user, vendor, listings, orders, wallets, reviews
+from .routers import auth, user, vendor, listings, orders, wallets, reviews, test_email
 from db.session import engine, SessionLocal  # Added SessionLocal import
 from models.base import Base
 from config import settings
 from .services.seed_service import SeedService  # Added SeedService import
+
+
 
 # Initialize Cloudinary
 cloudinary.config(
@@ -67,6 +69,7 @@ app.include_router(listings.router, prefix="/listings", tags=["Listings"])
 app.include_router(orders.router, prefix="/orders", tags=["Orders"])
 app.include_router(wallets.router, prefix="/wallets", tags=["Wallets"])
 app.include_router(reviews.router, prefix="/reviews", tags=["Reviews"])
+app.include_router(test_email.router, prefix="/email", tags=["Email"])
 
 @app.get("/")
 async def root():

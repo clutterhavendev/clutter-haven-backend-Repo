@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
+
+    RESEND_API_KEY: str 
     
     class Config:
         env_file = ".env"

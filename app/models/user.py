@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.types import DECIMAL
 from sqlalchemy.orm import relationship
-from db.base import Base
 from datetime import datetime, timezone
 from .base import Base
 
@@ -18,12 +17,17 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     is_admin = Column(Boolean, default=False)  # ✅ Admin capability
 
+    # 🔹 Email verification fields
+    verification_token = Column(String, nullable=True)
+    verification_token_expires = Column(DateTime, nullable=True)
+
     # Relationships
     vendor_profile = relationship("Vendor", back_populates="user", uselist=False)
     wallet = relationship("Wallet", back_populates="user", uselist=False)
     orders_as_buyer = relationship("Order", back_populates="buyer")
     reviews_given = relationship("Review", back_populates="buyer")
-    
+
+
 class Wallet(Base):
     __tablename__ = "wallets"
     

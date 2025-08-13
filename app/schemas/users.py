@@ -39,6 +39,12 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
 
+# 🔹 New schema for email verification response
+class EmailVerificationResponse(BaseModel):
+    message: str
+    email: EmailStr
+    is_verified: bool
+
 # USER WALLET
 
 class WalletResponse(BaseModel):
