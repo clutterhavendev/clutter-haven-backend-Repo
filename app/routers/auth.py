@@ -5,6 +5,8 @@ from app.schemas.users import UserCreate, UserLogin, UserResponse
 from services.user import UserService
 from services.auth import AuthService
 import resend
+import requests
+import json
 import os
 import logging
 
@@ -35,20 +37,19 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
     verification_link = f"https://yourdomain.com/verify-email?token={token}"
     
-    # Send verification email
+    # Send verification email using direct API
     try:
-        response = resend.Emails.send({
-            "from": "onboarding@resend.dev",
-            "to": user.email,
-            "subject": "Verify your email - Clutter Haven",
-            "html": f"""
+        result = send_email_via_api(
+            to_email=user.email,
+            subject="Verify your email - Clutter Haven",
+            html_content=f"""
                 <h2>Welcome to Clutter Haven!</h2>
                 <p>Click the link below to verify your email address:</p>
                 <a href="{verification_link}">Verify Email</a>
                 <p>This link will expire in 24 hours.</p>
             """
-        })
-        logger.info(f"Email sent successfully: {response}")
+        )
+        logger.info(f"Email sent successfully: {result}")
         
     except Exception as e:
         logger.error(f"Email sending failed: {str(e)}")
@@ -59,27 +60,49 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     return user
 
 
+def send_email_via_api(to_email: str, subject: str, html_content: str):
+    """Send email using Resend REST API directly."""
+    api_key = os.getenv("RESEND_API_KEY")
+    if not api_key:
+        raise Exception("No API key found")
+    
+    url = "https://api.resend.com/emails"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "from": "onboarding@resend.dev",
+        "to": [to_email],
+        "subject": subject,
+        "html": html_content
+    }
+    
+    response = requests.post(url, headers=headers, json=data)
+    
+    if response.status_code != 200:
+        raise Exception(f"HTTP {response.status_code}: {response.text}")
+    
+    return response.json()
+
+
 @router.get("/test-email")
 async def test_email():
-    """Test email sending configuration."""
+    """Test email sending configuration using REST API."""
     try:
         api_key = os.getenv("RESEND_API_KEY")
         if not api_key:
             return {"error": "No API key found", "has_key": False}
         
-        # Check if key format is correct
-        if not api_key.startswith("re_"):
-            return {"error": "Invalid API key format", "key_prefix": api_key[:5] if len(api_key) > 5 else api_key}
-            
-        logger.info(f"Testing email with API key: {api_key[:10]}...")
+        # Test with direct API call
+        result = send_email_via_api(
+            to_email="test@example.com",
+            subject="Test Email from Clutter Haven API",
+            html_content="<p>This is a test email using direct API call</p>"
+        )
         
-        response = resend.Emails.send({
-            "from": "onboarding@resend.dev",
-            "to": "test@example.com",  # Replace with a real email for testing
-            "subject": "Test Email from Clutter Haven",
-            "html": "<p>This is a test email from your Clutter Haven backend</p>"
-        })
-        return {"success": True, "response": response, "has_key": True}
+        return {"success": True, "response": result, "method": "direct_api"}
         
     except Exception as e:
         logger.error(f"Test email failed: {str(e)}")
@@ -87,7 +110,7 @@ async def test_email():
             "error": str(e), 
             "type": type(e).__name__,
             "has_key": bool(os.getenv("RESEND_API_KEY")),
-            "key_prefix": os.getenv("RESEND_API_KEY")[:5] if os.getenv("RESEND_API_KEY") else None
+            "method": "direct_api"
         }
 
 

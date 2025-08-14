@@ -92,4 +92,5 @@ charset-normalizer==3.4.1
 idna==3.4
 regex==2024.11.6
 
-resend
+requests>=2.31.0
+resend>=0.6.0
