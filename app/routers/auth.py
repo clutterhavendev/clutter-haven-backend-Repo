@@ -6,8 +6,10 @@ from services.user import UserService
 from services.auth import AuthService
 import resend
 import os
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 resend.api_key = os.getenv("RESEND_API_KEY")
 
@@ -15,6 +17,14 @@ resend.api_key = os.getenv("RESEND_API_KEY")
 @router.post("/register", response_model=UserResponse)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user and send verification email."""
+    
+    # Check if API key is loaded
+    api_key = os.getenv("RESEND_API_KEY")
+    if not api_key:
+        logger.error("RESEND_API_KEY environment variable not found")
+        raise HTTPException(status_code=500, detail="Email service configuration error")
+    
+    logger.info(f"Using API key: {api_key[:10]}..." if api_key else "No API key")
     
     user = UserService.create_user(db, user_data)
 
@@ -24,9 +34,10 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     )
 
     verification_link = f"https://yourdomain.com/verify-email?token={token}"
+    
     # Send verification email
     try:
-        resend.Emails.send({
+        response = resend.Emails.send({
             "from": "onboarding@resend.dev",
             "to": user.email,
             "subject": "Verify your email - Clutter Haven",
@@ -37,10 +48,34 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
                 <p>This link will expire in 24 hours.</p>
             """
         })
+        logger.info(f"Email sent successfully: {response}")
+        
     except Exception as e:
+        logger.error(f"Email sending failed: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"User email: {user.email}")
         raise HTTPException(status_code=500, detail=f"Error sending email: {str(e)}")
 
     return user
+
+
+@router.get("/test-email")
+async def test_email():
+    """Test email sending configuration."""
+    try:
+        api_key = os.getenv("RESEND_API_KEY")
+        if not api_key:
+            return {"error": "No API key found"}
+            
+        response = resend.Emails.send({
+            "from": "onboarding@resend.dev",
+            "to": "test@example.com",  # Replace with a real email for testing
+            "subject": "Test Email",
+            "html": "<p>This is a test email</p>"
+        })
+        return {"success": True, "response": response}
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
 
 
 @router.get("/verify-email")
