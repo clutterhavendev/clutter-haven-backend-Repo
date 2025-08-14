@@ -5,7 +5,6 @@ from app.schemas.users import UserCreate, UserLogin, UserResponse
 from services.user import UserService
 from services.auth import AuthService
 import resend
-import uuid
 import os
 
 router = APIRouter()
@@ -16,14 +15,18 @@ resend.api_key = os.getenv("RESEND_API_KEY")
 @router.post("/register", response_model=UserResponse)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user and send verification email."""
- 
+    
+    # Create the new user
     user = UserService.create_user(db, user_data)
 
-    token = str(uuid.uuid4())
-    UserService.save_verification_token(db, user.id, token)
+    # Create JWT verification token
+    token = AuthService.create_access_token(
+        data={"user_id": user.id, "email": user.email}
+    )
 
     verification_link = f"https://yourdomain.com/verify-email?token={token}"
 
+    # Send verification email
     try:
         resend.Emails.send({
             "from": "no-reply@clutterhaven.com",
@@ -44,15 +47,18 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 @router.get("/verify-email")
 def verify_email(token: str = Query(...), db: Session = Depends(get_db)):
-   
-    user = UserService.get_user_by_verification_token(db, token)
-
-    if not user:
+    """Verify email using the JWT token."""
+    
+    payload = AuthService.verify_access_token(token)
+    if not payload:
         raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+
+    user = UserService.get_user_by_id(db, payload.get("user_id"))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     # Mark user as verified
     user.is_verified = True
-    user.verification_token = None
     db.commit()
 
     return {"message": "Email verified successfully"}
@@ -61,6 +67,7 @@ def verify_email(token: str = Query(...), db: Session = Depends(get_db)):
 @router.post("/login")
 async def login(login_data: UserLogin, db: Session = Depends(get_db)):
     """Login user and return access token."""
+    
     user = AuthService.authenticate_user(db, login_data.email, login_data.password)
     if not user:
         raise HTTPException(
