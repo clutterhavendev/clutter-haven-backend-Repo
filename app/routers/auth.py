@@ -65,17 +65,30 @@ async def test_email():
     try:
         api_key = os.getenv("RESEND_API_KEY")
         if not api_key:
-            return {"error": "No API key found"}
+            return {"error": "No API key found", "has_key": False}
+        
+        # Check if key format is correct
+        if not api_key.startswith("re_"):
+            return {"error": "Invalid API key format", "key_prefix": api_key[:5] if len(api_key) > 5 else api_key}
             
+        logger.info(f"Testing email with API key: {api_key[:10]}...")
+        
         response = resend.Emails.send({
             "from": "onboarding@resend.dev",
             "to": "test@example.com",  # Replace with a real email for testing
-            "subject": "Test Email",
-            "html": "<p>This is a test email</p>"
+            "subject": "Test Email from Clutter Haven",
+            "html": "<p>This is a test email from your Clutter Haven backend</p>"
         })
-        return {"success": True, "response": response}
+        return {"success": True, "response": response, "has_key": True}
+        
     except Exception as e:
-        return {"error": str(e), "type": type(e).__name__}
+        logger.error(f"Test email failed: {str(e)}")
+        return {
+            "error": str(e), 
+            "type": type(e).__name__,
+            "has_key": bool(os.getenv("RESEND_API_KEY")),
+            "key_prefix": os.getenv("RESEND_API_KEY")[:5] if os.getenv("RESEND_API_KEY") else None
+        }
 
 
 @router.get("/verify-email")
