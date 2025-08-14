@@ -16,7 +16,6 @@ resend.api_key = os.getenv("RESEND_API_KEY")
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user and send verification email."""
     
-    # Create the new user
     user = UserService.create_user(db, user_data)
 
     # Create JWT verification token
@@ -25,7 +24,6 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     )
 
     verification_link = f"https://yourdomain.com/verify-email?token={token}"
-
     # Send verification email
     try:
         resend.Emails.send({
