@@ -29,7 +29,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     # Send verification email
     try:
         resend.Emails.send({
-            "from": "no-reply@clutterhaven.com",
+            "from": "onboarding@resend.dev",
             "to": user.email,
             "subject": "Verify your email - Clutter Haven",
             "html": f"""
