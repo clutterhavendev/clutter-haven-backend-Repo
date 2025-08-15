@@ -1,5 +1,5 @@
 from .base import Base
-from .user import User, Wallet
+from .user import User, Wallet, Role, Permission
 from .vendor import Vendor, VendorPlan
 from .listing import Listing
 from .order import Order, Payment, DeliveryRequest
