@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from faker import Faker
 import pandas as pd
 from sqlalchemy import create_engine, text, MetaData
+from typing import List
 from sqlalchemy.orm import Session, sessionmaker
 from dotenv import load_dotenv
 from config import source_prototype_engine
@@ -137,6 +138,32 @@ def generate_users(session: Session, n: int = 1000):
     
     return users
 
+def generate_vendors(session: Session, users: List[User], plans: List[VendorPlan]):
+    """Generate vendor data for seller users"""
+    seller_users = [u for u in users if getattr(u, 'user_type', None) == 'seller']
+    logger.info(f"Generating vendors for {len(seller_users)} seller ")
+    
+    vendors: List[Vendor] = []
+    for user in seller_users:
+        # 70% basic plan, 30% premium
+        plan = plans[0] if random.random() < 0.7 else plans[1]
+        
+        vendor = Vendor(
+            user_id=user.id,
+            plan_id=plan.id,
+            verification_status=random.choice(['verified', 'verified', 'verified', 'pending', 'rejected']),
+            id_verified=random.choice([True, True, False]),
+            location_verified=random.choice([True, True, False]),
+            created_at=user.created_at + timedelta(days=random.randint(1, 30))            
+        )
+        vendors.append(vendor)
+        session.add(vendor)
+        
+    session.commit()
+    logger.info(f"Created {len(vendors)} vendors")
+    
+    return session.query(Vendor).all()
+
 def populate_database():
     """Main function to populate the database"""
     logger.info("Starting database population process....")
@@ -152,8 +179,13 @@ def populate_database():
         plans = create_vendor_plans(session)
         logger.info(f"Vendor plans created: {[plan.name for plan in plans]}")
         
-        users = generate_users(session, 1000)
+        # Generate users and wallets
+        users = generate_users(session, 10)
         logger.info(f"Generated {len(users)} users")
+        
+        # Generate vendors
+        vendors = generate_vendors(session, users, plans)
+        logger.info(f"Generated {len(vendors)} vendors")
         
         logger.info("\nDatabase population completed successfully!")
         
