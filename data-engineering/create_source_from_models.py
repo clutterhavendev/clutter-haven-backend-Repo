@@ -97,9 +97,6 @@ def generate_users(session: Session, n: int = 1000):
     """Generate user date"""
     logger.info(f"Generating {n} users...")
     
-    nigerian_cities = ['Lagos', 'Abuja', 'Kano', 'Ibadan', 'Port Harcourt', 
-                      'Benin City', 'Kaduna', 'Enugu', 'Aba', 'Onitsha']
-    
     users = []
     for i in range(n):
         created_date = fake.date_time_between(start_date='-2y', end_date='now', tzinfo=timezone.utc)
@@ -209,6 +206,57 @@ def generate_listings(session: Session, vendors: List[Vendor], n: int = 1000):
     
     return session.query(Listing).all()
 
+def generate_orders(session: Session, users: List[User], listings: List[Listing], n: int = 1000):
+    """Generate orders"""
+    logger.info(f"Generating {n} orders...")
+    
+    # Only buyers make orders
+    buyers = [u for u in users if getattr(u, 'user_type', None) == 'buyer']
+    # Only active listings can be ordered
+    active_listings = [l for l in listings if getattr(l, 'is_active', None) == True]
+    
+    orders: List[Order] = []
+    for i in range(n):
+        buyer = random.choice(buyers)
+        listing = random.choice(active_listings)
+        
+        # Ensure listing.created_at is a datetime, not a Column object
+        listing_created_at = getattr(listing, 'created_at', None)
+        if not isinstance(listing_created_at, datetime):
+            raise ValueError("listing.created_at is not a datetime object")
+        
+        # Order date is after listing creation
+        order_date = fake.date_time_between(
+            start_date=listing_created_at,
+            end_date='now',
+            tzinfo=timezone.utc
+        )
+        
+        # Status progression with dates
+        status = random.choices(
+            ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'],
+            weights=[0.1, 0.15, 0.25, 0.5, 0.1]
+        )[0]
+        
+        delivered_at = None
+        if status == 'delivered':
+            delivered_at = order_date + timedelta(days=random.randint(3, 10))
+                
+        order = Order(
+            buyer_id=buyer.id,
+            listing_id=listing.id,
+            status=status,
+            ordered_at=order_date,
+            delivered_at=delivered_at
+        )
+        session.add(order)
+        orders.append(order)
+    
+    session.commit()
+    logger.info(f"Created {n} orders")
+    
+    return session.query(Order).all()
+
 def populate_database():
     """Main function to populate the database"""
     logger.info("Starting database population process....")
@@ -233,8 +281,12 @@ def populate_database():
         logger.info(f"Generated {len(vendors)} vendors")
         
         # Generate listings
-        listings = generate_listings(session, vendors, 10)
+        listings = generate_listings(session, vendors, 100)
         logger.info(f"Generated {len(listings)} listings")
+        
+        # Generate orders
+        orders = generate_orders(session, users, listings, 10)
+        logger.info(f"Generated {len(orders)} orders")
         
         logger.info("\nDatabase population completed successfully!")
         
