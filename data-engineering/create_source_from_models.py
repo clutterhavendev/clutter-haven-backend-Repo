@@ -2,7 +2,7 @@ import sys
 # import os
 from pathlib import Path
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from faker import Faker
 import pandas as pd
 from sqlalchemy import create_engine, text, MetaData
@@ -92,6 +92,51 @@ def create_vendor_plans(session: Session):
     
     return session.query(VendorPlan).all()
 
+def generate_users(session: Session, n: int = 1000):
+    """Generate user date"""
+    logger.info(f"Generating {n} users...")
+    
+    nigerian_cities = ['Lagos', 'Abuja', 'Kano', 'Ibadan', 'Port Harcourt', 
+                      'Benin City', 'Kaduna', 'Enugu', 'Aba', 'Onitsha']
+    
+    users = []
+    for i in range(n):
+        created_date = fake.date_time_between(start_date='-2y', end_date='now', tzinfo=timezone.utc)
+        
+        # 20% sellers, 80% buyers
+        user_type = 'seller' if random.random() < 0.2 else 'buyer'
+        
+        user = User(
+            full_name=fake.name(),
+            email=f"user{i+1}@clutterhaven.com",
+            phone=f"+234{random.randint(7000000000, 9099999999)}",
+            password_hash=hash_password("password123"),  # In real app, each would be different
+            user_type=user_type,
+            is_verified=random.choice([True, True, True, False]),  # 75% verified
+            created_at=created_date,
+            is_admin=(i == 0)  # First user is admin
+        )
+        
+        session.add(user)
+        
+    session.commit()
+    logger.info(f"Generated {n} users")
+    
+    # Create wallets for all users
+    users = session.query(User).all()
+    for user in users:
+        wallet = Wallet(
+            user_id=user.id,
+            balance=random.uniform(0, 50000),  # Random balance up to ₦50,000
+            updated_at=user.created_at
+        )
+        session.add(wallet)
+        
+    session.commit()
+    logger.info("Created wallets for all users")
+    
+    return users
+
 def populate_database():
     """Main function to populate the database"""
     logger.info("Starting database population process....")
@@ -105,9 +150,10 @@ def populate_database():
     try:
         # Create vendor plans first
         plans = create_vendor_plans(session)
-        
-        # Log the created vendor plans to ensure the variable is accessed
         logger.info(f"Vendor plans created: {[plan.name for plan in plans]}")
+        
+        users = generate_users(session, 1000)
+        logger.info(f"Generated {len(users)} users")
         
         logger.info("\nDatabase population completed successfully!")
         
