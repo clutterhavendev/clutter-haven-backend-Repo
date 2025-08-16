@@ -12,9 +12,11 @@ from config import source_prototype_engine
 import bcrypt
 import logging
 
-# Add the app directory to Python path to import models
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+# Add paths
+parent_path = Path(__file__).parent.parent
+app_path = parent_path / "app"
+sys.path.insert(0, str(parent_path))
+sys.path.insert(0, str(app_path))
 
 from app.models.base import Base
 from app.models.user import User, Wallet
@@ -37,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # initialize Faker
-fake = Faker('en_NG') # Use Nigerian locale
+fake = Faker()
 
 # Establish Session
 SessionLocal = sessionmaker(bind=source_prototype_engine)
@@ -50,7 +52,7 @@ def create_database_from_models():
         Base.metadata.drop_all(bind=source_prototype_engine)
         logger.info("Dropped existing tables")
         
-        Base.metada.create_all(bind=source_prototype_engine)
+        Base.metadata.create_all(bind=source_prototype_engine)
         logger.info("Created database schema from models")
         
     except Exception as e:
