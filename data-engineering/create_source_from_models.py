@@ -289,6 +289,133 @@ def generate_payments(session: Session, orders: List[Order]):
     
     return payments
 
+def generate_delivery_requests(session: Session, orders: List[Order]):
+    """Generate delivery requests for confirmed/shipped/delivered orders"""
+    logger.info("Generating delivery requests...")
+    
+    delivery_requests: List[DeliveryRequest] = []
+    eligible_orders = [o for o in orders if o.status in ['confirmed', 'shipped', 'delivered']]
+    
+    logistics_partners = ['DHL', 'FedEx', 'GIG Logistics', 'Kwik Delivery', 'SendBox']
+    
+    for order in eligible_orders:
+        delivery_status = 'pending'
+        if getattr(order, 'status', None) == 'shipped':
+            delivery_status = 'in_transit'
+        elif getattr(order, 'status', None) == 'delivered':
+            delivery_status = 'delivered'
+        
+        delivery = DeliveryRequest(
+            order_id=order.id,
+            dispatch_option=random.choice(['pickup', 'drop-off']),
+            logistics_partner=random.choice(logistics_partners),
+            delivery_status=delivery_status,
+            confirmed_by_buyer=(delivery_status == 'delivered')
+        )
+        delivery_requests.append(delivery)
+        session.add(delivery)
+    
+    session.commit()
+    logger.info(f"Created {len(delivery_requests)} delivery requests")
+    
+    return delivery_requests
+
+def generate_reviews(session: Session, orders: List[Order], vendors: List[Vendor]):
+   """Generate reviews for delivered orders"""
+   logger.info("Generating reviews...")
+   
+   delivered_orders = [o for o in orders if getattr(o, 'status', None) == 'delivered']
+   # Only 30% of delivered orders get reviews
+   reviewed_orders = random.sample(delivered_orders, int(len(delivered_orders) * 0.3))
+   
+   review_templates = [
+       ("Great product, fast delivery!", 5),
+       ("Good quality, as described", 4),
+       ("Excellent service, will buy again", 5),
+       ("Product was okay, delivery was slow", 3),
+       ("Not as described, disappointed", 2),
+       ("Amazing! Exceeded expectations", 5),
+       ("Fair price, good quality", 4),
+       ("Vendor was very responsive", 5),
+       ("Package was damaged", 2),
+       ("Perfect condition, thank you!", 5)
+   ]
+   
+   for order in reviewed_orders:
+       # Find vendor for this order
+       listing = session.query(Listing).filter_by(id=order.listing_id).first()
+       
+       if listing is not None:
+           comment, rating = random.choice(review_templates)
+           
+           review = Review(
+               buyer_id=order.buyer_id,
+               vendor_id=listing.vendor_id,
+               rating=rating,
+               comment=comment,
+               created_at=order.delivered_at + timedelta(days=random.randint(1, 7))
+           )
+           session.add(review)
+       else:
+           logger.warning(f"Listing not found for order_id={order.id}, skipping review.")
+   
+   session.commit()
+   logger.info(f"Created {len(reviewed_orders)} reviews")
+
+def print_summary(session: Session):
+   """Print database summary"""
+   logger.info("=" * 50)
+   logger.info("DATABASE POPULATION SUMMARY")
+   logger.info("=" * 50)
+   
+   counts = {
+       'Users': session.query(User).count(),
+       'Vendors': session.query(Vendor).count(),
+       'Vendor Plans': session.query(VendorPlan).count(),
+       'Listings': session.query(Listing).count(),
+       'Orders': session.query(Order).count(),
+       'Payments': session.query(Payment).count(),
+       'Delivery Requests': session.query(DeliveryRequest).count(),
+       'Reviews': session.query(Review).count(),
+       'Wallets': session.query(Wallet).count()
+   }
+   
+   for table, count in counts.items():
+       logger.info(f"{table}: {count}")
+   
+   # Some interesting stats
+   logger.info("\n" + "=" * 50)
+   logger.info("INTERESTING STATS")
+   logger.info("=" * 50)
+   
+   # Top vendors by orders
+   result = session.execute(text("""
+       SELECT u.full_name, COUNT(DISTINCT o.id) as order_count
+       FROM vendors v
+       JOIN users u ON v.user_id = u.id
+       JOIN listings l ON v.id = l.vendor_id
+       JOIN orders o ON l.id = o.listing_id
+       GROUP BY u.full_name
+       ORDER BY order_count DESC
+       LIMIT 5
+   """))
+   
+   logger.info("\nTop 5 Vendors by Orders:")
+   for row in result:
+       logger.info(f"  - {row[0]}: {row[1]} orders")
+   
+   # Order distribution by status
+   result = session.execute(text("""
+       SELECT status, COUNT(*) as count
+       FROM orders
+       GROUP BY status
+       ORDER BY count DESC
+   """))
+   
+   logger.info("\nOrder Status Distribution:")
+   for row in result:
+       logger.info(f"  - {row[0]}: {row[1]}")
+
 def populate_database():
     """Main function to populate the database"""
     logger.info("Starting database population process....")
@@ -305,7 +432,7 @@ def populate_database():
         logger.info(f"Vendor plans created: {[plan.name for plan in plans]}")
         
         # Generate users and wallets
-        users = generate_users(session, 10)
+        users = generate_users(session, 50)
         logger.info(f"Generated {len(users)} users")
         
         # Generate vendors
@@ -317,12 +444,23 @@ def populate_database():
         logger.info(f"Generated {len(listings)} listings")
         
         # Generate orders
-        orders = generate_orders(session, users, listings, 10)
+        orders = generate_orders(session, users, listings, 100)
         logger.info(f"Generated {len(orders)} orders")
         
         # Generate payments
         payments = generate_payments(session, orders)
         logger.info(f"Generated {len(payments)} payments")
+        
+        # Generate delivery requests
+        delivery_requests = generate_delivery_requests(session, orders)
+        logger.info(f"Generated {len(delivery_requests)} delivery requests")
+        
+        # Generate reviews
+        generate_reviews(session, orders, vendors)
+        logger.info("Generated reviews for delivered orders")
+        
+        # Print summary
+        print_summary(session)
         
         logger.info("\nDatabase population completed successfully!")
         
