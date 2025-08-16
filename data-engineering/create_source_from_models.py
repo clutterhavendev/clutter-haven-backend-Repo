@@ -216,7 +216,7 @@ def generate_orders(session: Session, users: List[User], listings: List[Listing]
     active_listings = [l for l in listings if getattr(l, 'is_active', None) == True]
     
     orders: List[Order] = []
-    for i in range(n):
+    for _ in range(n):
         buyer = random.choice(buyers)
         listing = random.choice(active_listings)
         
@@ -257,6 +257,38 @@ def generate_orders(session: Session, users: List[User], listings: List[Listing]
     
     return session.query(Order).all()
 
+def generate_payments(session: Session, orders: List[Order]):
+    """Generate payments for orders"""
+    logger.info(f"Generating payments.....")
+    
+    payments: List[Payment] = []
+    for order in orders:
+        # All orders except pending have payments
+        if getattr(order, 'status', None) != 'pending':
+            listing = session.query(Listing).filter_by(id=order.listing_id).first()
+            
+            if listing is not None and hasattr(listing, 'price'):
+                price_value = getattr(listing, 'price', None)
+                if price_value is not None and not hasattr(price_value, 'expression'):  
+                    payment = Payment(
+                        order_id=order.id,
+                        amount=price_value,
+                        payment_method=random.choice(['card', 'wallet']),
+                        status='completed' if getattr(order, 'status', None) != 'pending' else 'pending',
+                        created_at=order.ordered_at + timedelta(minutes=random.randint(1, 30))
+                    )
+                    payments.append(payment)
+                    session.add(payment)
+                else:
+                    logger.warning(f"Listing price is not a valid value for order_id={order.id}")
+            else:
+                logger.warning(f"Listing not found or missing price for order_id={order.id}")
+    
+    session.commit()
+    logger.info(f"Created {len(payments)} payments")
+    
+    return payments
+
 def populate_database():
     """Main function to populate the database"""
     logger.info("Starting database population process....")
@@ -287,6 +319,10 @@ def populate_database():
         # Generate orders
         orders = generate_orders(session, users, listings, 10)
         logger.info(f"Generated {len(orders)} orders")
+        
+        # Generate payments
+        payments = generate_payments(session, orders)
+        logger.info(f"Generated {len(payments)} payments")
         
         logger.info("\nDatabase population completed successfully!")
         
