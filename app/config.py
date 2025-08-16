@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080", "*"]
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
     
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
@@ -41,5 +41,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+
 
 settings = Settings()
