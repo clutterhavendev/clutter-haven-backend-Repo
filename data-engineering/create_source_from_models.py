@@ -164,6 +164,51 @@ def generate_vendors(session: Session, users: List[User], plans: List[VendorPlan
     
     return session.query(Vendor).all()
 
+def generate_listings(session: Session, vendors: List[Vendor], n: int = 1000):
+    """Generate listing"""
+    logger.info(f"Generating {n} listings...")
+    
+    categories = {
+        'Electronics': ['Phone', 'Laptop', 'Tablet', 'Headphones', 'Camera', 'TV', 'Gaming Console'],
+        'Fashion': ['Shirt', 'Dress', 'Shoes', 'Bag', 'Watch', 'Jewelry', 'Sunglasses'],
+        'Home & Garden': ['Furniture', 'Decor', 'Kitchen Appliance', 'Garden Tools', 'Lighting'],
+        'Books': ['Fiction', 'Non-fiction', 'Educational', 'Comics', 'Magazines'],
+        'Sports': ['Equipment', 'Apparel', 'Shoes', 'Accessories', 'Fitness Gear'],
+        'Beauty': ['Skincare', 'Makeup', 'Hair Care', 'Perfume', 'Tools'],
+        'Toys': ['Action Figures', 'Board Games', 'Puzzles', 'Dolls', 'Educational'],
+        'Vehicles': ['Car Parts', 'Motorcycle Parts', 'Accessories', 'Tools']
+    }
+   
+    conditions = ['new', 'like new', 'good', 'fair']
+
+    # Only verified vendors can create listings
+    active_vendors = [v for v in vendors if getattr(v, 'verification_status', None) == 'verified']
+    
+    listings: List[Listing] = []
+    for i in range(n):
+        vendor = random.choice(active_vendors)
+        category = random.choice(list(categories.keys()))
+        item_type = random.choice(categories[category])
+        
+        listing = Listing(
+            vendor_id=vendor.id,
+            title=f"{fake.company()} {item_type}",
+            description=fake.text(max_nb_chars=500),
+            price=round(random.uniform(500, 100000), 2),  # ₦500 to ₦100,000
+            item_condition=random.choice(conditions),
+            category=category,
+            image_url=f"https://example.com/images/listing_{i+1}.jpg",
+            is_active=random.choice([True, True, True, False]),  # 75% active
+            created_at=vendor.created_at + timedelta(days=random.randint(1, 180))
+        )
+        listings.append(listing)
+        session.add(listing)
+        
+    session.commit()
+    logger.info(f"Created {n} listings")
+    
+    return session.query(Listing).all()
+
 def populate_database():
     """Main function to populate the database"""
     logger.info("Starting database population process....")
@@ -186,6 +231,10 @@ def populate_database():
         # Generate vendors
         vendors = generate_vendors(session, users, plans)
         logger.info(f"Generated {len(vendors)} vendors")
+        
+        # Generate listings
+        listings = generate_listings(session, vendors, 10)
+        logger.info(f"Generated {len(listings)} listings")
         
         logger.info("\nDatabase population completed successfully!")
         
